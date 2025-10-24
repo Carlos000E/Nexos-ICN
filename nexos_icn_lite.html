@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexos ICN Lite - Orbitador Core Simulado</title>
+    <!-- Tailwind CSS CDN para um design responsivo e de custo zero -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilo para simular a InfoEsfera - Foco na Semântica */
+        .infoesfera-card {
+            border-left: 4px solid #3b82f6; /* Cor primária do Tailwind (blue-500) */
+        }
+        .loading-animation {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white shadow-xl rounded-lg p-6">
+        <header class="mb-6 border-b pb-4">
+            <h1 class="text-3xl font-bold text-gray-800">Nexos ICN Lite</h1>
+            <p class="text-sm text-gray-500">Orbitador Core Simulado - Prova de Conceito (VD-OS Lite)</p>
+        </header>
+
+        <!-- Seção de Roteamento HASH-R.T. -->
+        <section class="mb-8">
+            <h2 class="text-xl font-semibold text-blue-600 mb-3">1. Resolução de Rota HASH-R.T.</h2>
+            <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                <input type="text" id="hashInput" value="TESTE_HASH_RT_1" placeholder="Insira o HASH-R.T." class="flex-grow p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                <button id="lookupButton" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-150">
+                    Buscar Rota
+                </button>
+            </div>
+            <div id="routeResult" class="bg-gray-50 p-4 rounded-md text-sm font-mono whitespace-pre-wrap">
+                Aguardando busca...
+            </div>
+        </section>
+
+        <!-- Seção de Renderização S-Markup (InfoEsfera) -->
+        <section>
+            <h2 class="text-xl font-semibold text-blue-600 mb-3">2. Renderização da InfoEsfera (S-Markup)</h2>
+            <div id="infoesferaContainer" class="space-y-4">
+                <!-- O conteúdo S-Markup renderizado será injetado aqui -->
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // URL do Router Service HASH-R.T. (VD-OS Core Lite)
+        const ROUTER_SERVICE_URL = "https://nexos-mu.vercel.app/";
+
+        // Simulação do S-Markup (Grafo de Entidades)
+        // Este é o dado que seria retornado pelo VD após a resolução do HASH-R.T.
+        const S_MARKUP_DATA = {
+            "metadata": {
+                "ID_Grafo_Value": "GFX1A2B3C4D5E6F7",
+                "ID_Criador_HASH_Value": "A1B2C3D4E5F67890A1B2C3D4E5F67890A1B2C3D4E5F67890A1B2C3D4E5F67890",
+                "Data_Criacao_Value": "2025-10-21T18:00:00Z"
+            },
+            "entities": {
+                "PerfilUsuario": {
+                    "properties": {
+                        "NomeCompleto": {
+                            "type": "TEXTO_CURTO",
+                            "value": "Aurora Estelar (Carlos E.)"
+                        },
+                        "IDUnico": {
+                            "type": "HASH_RT",
+                            "value": "B9A8D7C6E5F4A3B2C1D0E9F8A7B6C5D4E3F2A1B0C9D8E7F6A5B4C3D2E1F0A9B8"
+                        },
+                        "Biografia": {
+                            "type": "TEXTO_LONGO",
+                            "value": "Desenvolvedor de InfoEsfera e arquiteto da Nexos. Foco em protocolos de descentralização e soberania de dados. Esta é a simulação do ICN Lite."
+                        },
+                        "Idade": {
+                            "type": "NUMERO",
+                            "value": 15
+                        }
+                    },
+                    "relationships": {
+                        "PostagemRecente": {
+                            "type": "EntidadePostagem",
+                            "link_type": "LINK_ID_Grafo",
+                            "link_value": "GFX1A2B3C4D5E6F7"
+                        },
+                        "ContatoExterno": {
+                            "type": "PerfilUsuario",
+                            "link_type": "LINK_HASH_RT",
+                            "link_value": "F0E1D2C3B4A59687F0E1D2C3B4A59687F0E1D2C3B4A59687F0E1D2C3B4A59687"
+                        }
+                    }
+                }
+            }
+        };
+
+        document.getElementById('lookupButton').addEventListener('click', lookupHash);
+
+        /**
+         * Simula o Orbitador Core: interpreta o Grafo de Entidades e o transforma em HTML.
+         * @param {object} graph - O Grafo de Dados S-Markup (JSON).
+         * @returns {string} HTML renderizado.
+         */
+        function renderSMarkup(graph) {
+            let html = `<div class="infoesfera-card p-4 bg-white shadow-md rounded-md">
+                            <h3 class="text-lg font-bold mb-2">Grafo de Dados: ${graph.metadata.ID_Grafo_Value}</h3>
+                            <p class="text-xs text-gray-500">Criador: ${graph.metadata.ID_Criador_HASH_Value.substring(0, 10)}...</p>
+                        </div>`;
+
+            for (const entityName in graph.entities) {
+                const entity = graph.entities[entityName];
+                html += `<div class="infoesfera-card p-6 bg-white shadow-lg rounded-md mt-4">
+                            <h3 class="text-xl font-extrabold text-gray-700 mb-4">${entityName}</h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">`;
+                
+                // Renderizar Propriedades
+                for (const propName in entity.properties) {
+                    const prop = entity.properties[propName];
+                    html += `<div class="bg-gray-50 p-3 rounded-md">
+                                <p class="text-xs font-medium text-gray-500">${propName} (${prop.type})</p>
+                                <p class="text-sm font-semibold text-gray-800">${prop.value}</p>
+                            </div>`;
+                }
+                html += `</div>`; // Fim do grid de propriedades
+
+                // Renderizar Relacionamentos (Links Navegáveis)
+                html += `<h4 class="text-md font-semibold text-gray-600 mt-4 mb-2 border-t pt-2">Relacionamentos (Links Nexos)</h4>
+                         <div class="flex flex-wrap gap-2">`;
+                for (const relName in entity.relationships) {
+                    const rel = entity.relationships[relName];
+                    const linkText = `${relName} (${rel.type})`;
+                    const linkValue = rel.link_value.substring(0, 10) + '...';
+                    
+                    html += `<button class="bg-purple-100 text-purple-800 text-xs font-semibold px-3 py-1 rounded-full hover:bg-purple-200 transition duration-150" 
+                                    title="${rel.link_type}: ${rel.link_value}">
+                                ${linkText}
+                            </button>`;
+                }
+                html += `</div>`; // Fim dos relacionamentos
+
+                html += `</div>`; // Fim do infoesfera-card
+            }
+
+            return html;
+        }
+
+        /**
+         * Simula o ICN: Busca a rota no Router Service e chama a renderização.
+         */
+        async function lookupHash() {
+            const hashInput = document.getElementById('hashInput');
+            const routeResult = document.getElementById('routeResult');
+            const infoesferaContainer = document.getElementById('infoesferaContainer');
+            const hash = hashInput.value.trim();
+
+            routeResult.innerHTML = `<div class="flex items-center gap-2"><div class="loading-animation"></div> Buscando rota para ${hash}...</div>`;
+            infoesferaContainer.innerHTML = '';
+
+            try {
+                // 1. Buscar a Rota HASH-R.T.
+                const response = await fetch(`${ROUTER_SERVICE_URL}/lookup/${hash}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    routeResult.innerHTML = `<span class="text-red-600">ERRO:</span> ${data.detail || "Erro desconhecido ao buscar rota."}`;
+                    return;
+                }
+
+                // 2. Exibir o resultado do Roteamento (VD-OS Core)
+                routeResult.innerHTML = JSON.stringify(data, null, 2);
+
+                // 3. Simular a obtenção do Grafo de Entidades (S-Markup)
+                // Na Nexos real, o ICN usaria o 'distribution_id' (GFX1A2B3C4D5E6F7)
+                // e o 'creator_hash' para buscar o Grafo de Entidades no VD.
+                // Aqui, usamos o dado estático S_MARKUP_DATA para simular.
+                
+                // 4. Renderizar a InfoEsfera (Orbitador Core)
+                infoesferaContainer.innerHTML = renderSMarkup(S_MARKUP_DATA);
+                
+            } catch (error) {
+                routeResult.innerHTML = `<span class="text-red-600">ERRO de Conexão:</span> Não foi possível conectar ao Router Service. Verifique se o backend está ativo. Detalhes: ${error.message}`;
+            }
+        }
+        
+        // Executa a primeira busca ao carregar a página
+        lookupHash();
+    </script>
+
+</body>
+</html>
+
